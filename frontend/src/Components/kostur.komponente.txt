@@ -1,0 +1,104 @@
+import { useState, useEffect } from 'react';
+import TripType from '../Types/trips.type';
+import api, { ApiResponse } from '../API/api';
+import { Container, Row, Col, Card, Button, Spinner } from 'react-bootstrap';
+import { ApiConfig } from '../Config/ApiConfig';
+
+const KosturPage: React.FC = () => { //formiranje komponente, naziv stranice (komponente) te kaže da je komponenta tipy :React.FC (reakt funkcionalna komponeta)
+                                    // poslije jednako može se tražiti promises, a kad nemaš pormise ostaviš prazno, i u nastavku je realizacija komponente
+    
+                                    // na početku svake komponente se formiraju stanja npr. podataka
+    const [tripData, setTripData] = useState<TripType[] | null>(null); //u ovom primjeru je formirano stanje podataka koje očekujemo iz baze podataka pomoću useState hook (kuke)
+                                                                       // tripData su podaci
+                                                                       // setTripData je funkcija (obzirom da je useState hook) koja će postavljati podatke u varijablu tripData
+                                                                       // useState predstavlja početnu vrijednost stanja tripData u ovom slučaju (null), s tim da je definisano da će 
+                                                                       // tripData biti niz objekata tpa TripType[] ili null (TripType[] | null)
+                                                                       // TripType je definicija tipa (u posebnom fajlu je napravljen al može i u istom ovom). Dakle svi trip-ovi će biti
+                                                                       // struktuirani kako je navedeno u tom tipu. Važno je napomenuti da tip mora odovarati odgovoru sa backend-a.
+                                                                       // Dakle ako postoji na backendu DTO preko kojeg je struktuiran response, slučna struktura treba biti i na frontendu.
+                                                                       // dakle ne moraju biti uključena sva polja (ali što da ne uključiš ako ih šalješ iz backenda), ali nazivi polja moraju biti ista
+                                                                       // jer time daješ do znanja da je to zapravo to polje.
+
+    useEffect(() => {
+        const fetchTrips = async () => {
+            try {
+                const response: ApiResponse<TripType[]> = await api('/trips', 'get');
+                if (response.status === 'ok' && response.data) {
+                    setTripData(response.data);
+                } else {
+                    console.error('Greška prilikom dohvaćanja podataka:', response.data);
+                }
+            } catch (error) {
+                console.error('Greška prilikom dohvaćanja podataka:', error);
+            }
+        };
+
+        fetchTrips();
+    }, []);
+
+    /* 
+    Ovo iznad je tzv. useEffect hook ili životni ciklus, komponente. Najjednostavnije pojašnjeno tu se konstrušie životni vijek komponente u fazonu šta će se izvršiti ako dođe do neke promjene.
+    Konkretno ovaj useEffect hook će izvršiti asinhroni poziv prema backendu da povuće podatke iz baze, i to samo JEDANPUT tj. samo kada dođe do montiranje komponete.
+    Unutar tok hook-a imamo asinhronu funkciju koja će to izvršiti fatchData
+    Pored te funckije tu je i try/catch blok koji hvata grešku ukoliko dođe do nje
+    const response: ApiResponse<TripType[]> = await api('/trips', 'get');, u suštini response je tipa ApiResponse<TripType[]> kao što smo definisali u stanju iznad.
+    A response ćeš dobiti koristeći api funkciju (koja je definisana u posebnom fajlu i koristi axios), koja šalje http get metod prema /trips tačnije (localhost:3000/trips) <- backend
+    Ako je odgovor sa statusom ok (response.status === ok) i ako postoje podaci (response.data) postavi stanja u stanje setTripData(response.data), ukoliko nije vrati grešku u konzoli ako smo
+    na backednu definisali stanje grešaka.
+    A ukoliko imam grešku, možemo je uhvatiti i poslati u konzoli. U suštini ovdje nije trebala dupla provjera, jer na backendu nemamo definisane greške.
+
+    fatchTrips() u suštini pošto je ovo jedna najjednostavnije složena funkcija gdje imamo u kuki definisanu funkciju i nju trebamo pokrenuti, naveli smo je i ona se odmah pokreće.
+    u ovom dijelu koda }, []); tačnije između ovih kockastih zagrada, ako ne postoji ništa u njima, do pokretanja ovog hook-a dolazi samo i iskljčivo kada se prvi put montira komponeta, i neće 
+    doći do promjene nikad više dok se ne refrešuje stranica. Tu se mogu navesti neke funkcije kada dođe do promjena nad njima, da se osjveže podaci i sl.
+    */
+
+    function formatDate(date: Date): string {
+        return new Date(date).toLocaleDateString('en-US');
+    }
+
+    /*
+    Ovo je funkcija koja konvertuje datum iz baze, DD/MM/YYYY (ona se mogla definisati da datum bude drugačijeg formata)
+    */
+    
+    /*
+    Kao i svaka funkcija ima return () a ovoj funkcionalnoj komponenti je return ustvari ono što će se prikazati na browseru.
+    Dakle počeli smo return gdje smo definisali Kontejner
+    u kontejneru je napravljen jedan red sa centriranim podacima!
+    U tom redu imamo jedno uvjetno renderovanje, koji koristi ternarni operator tj. tripData ? ...: ... kako bi provjerili da li postoji podataka u tripData
+    ako podaci postoje ubaci ih u trip, mapirati ih u kolonu. S tim da svaka ta kolona na lg ekranima bude 3 polja, na md ekranima bude 4 polja, i da svaka ima klasu mb-4 što prestavlja <magine-bottom:4px>
+    A svaka ta kolona će imati karticu.
+    Dakle tu radimo izgled svakog objekta u tom mapiranoj listi.
+
+    na kraju : <Spinner animation="border" variant="warning" /> predstavlja, ono što će biti prikazano ukoliko ili dok ne stignu podaci o tripData
+    */
+    return (
+        <Container fluid="xxl">
+            <Row  className='justify-content-md-center'>
+                {tripData ? tripData.map(trip => (
+                    <Col lg={3} key={trip.id} md={4} className="mb-4">
+                        <Card style={{width:"300px", minHeight:"470px"}}>
+                        <Card.Img variant='top' src={ApiConfig.PHOTO_PATH + "small_" + trip.image_path}></Card.Img>
+                        <div style={{ position: 'relative' }}>
+                            <div style={{ position: 'absolute', bottom: 0, width: '100%', padding: '8px'}}>
+                                <div className='badge bg-danger text-wrap float-end text-end'>
+                                    <div>Datum polaska: {trip.start_date ? formatDate(trip.start_date) : 'N/A'}</div>
+                                    <div>Datum povratka: {trip.end_date ? formatDate(trip.end_date) : 'N/A'}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <Card.Body className='d-flex flex-column'>
+                            <Card.Title>{trip.name}</Card.Title>
+                            <Card.Text>{trip.description ? trip.description.slice(0, 160) + (trip.description.length > 160 ? "..." : "") : 'N/A'}</Card.Text>
+                        </Card.Body>
+                        <Card.Footer className="text-muted">
+                            <Button variant="primary">Detalji</Button>
+                        </Card.Footer>
+                    </Card>
+                    </Col>
+                )) : <Spinner animation="border" variant="warning" />}
+            </Row>
+        </Container>
+    )
+};
+
+export default KosturPage;

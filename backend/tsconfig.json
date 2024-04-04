@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+      "target": "es2017",
+      "module": "commonjs",
+      "sourceMap": true,
+      "esModuleInterop": true,
+      "outDir": "./dist", // direktorij gdje će TypeScript kompajler generisati JavaScript fajlove
+      "baseUrl": "./", // Osnova za relativne module reference
+      "strict": true // sve stroge provjere typescripta
+    }
+  }
+  
